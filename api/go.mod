@@ -1,3 +1,5 @@
-module www.github.com/mdanyalkhan/recipe-book/api
+module github.com/mdanyalkhan/recipe-book/api
 
 go 1.16
+
+require github.com/gorilla/mux v1.8.0

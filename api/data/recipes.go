@@ -1,5 +1,10 @@
 package data
 
+import (
+	"encoding/json"
+	"io"
+)
+
 type Recipe struct {
 	ID           int      `json:"id"`
 	Name         string   `json:"name"`
@@ -12,6 +17,11 @@ type Recipes []*Recipe
 
 func GetRecipes() Recipes {
 	return recipeList
+}
+
+func (recipe *Recipes) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(recipe)
 }
 
 var recipeList = Recipes{{
