@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,11 +11,39 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	"github.com/mdanyalkhan/recipe-book/api/handlers"
+	"github.com/mdanyalkhan/recipe-book/api/util"
+)
+
+const (
+	sqlConfigPath = "./sql_config.yaml"
+	dbname        = "testdb"
 )
 
 func main() {
 	l := log.New(os.Stdout, "recipes-api", log.LstdFlags)
+
+	sqlConfig, err := util.ReadConfig(sqlConfigPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		sqlConfig.Host, sqlConfig.Port, sqlConfig.User, sqlConfig.Password, dbname)
+
+	db, dbErr := sql.Open("postgres", psqlInfo)
+	if dbErr != nil {
+		log.Fatal(dbErr)
+	}
+	defer db.Close()
+	pingErr := db.Ping()
+	if pingErr != nil {
+		log.Fatal(pingErr)
+	}
+
+	l.Println("Established connection with postgresql")
 	recipes := handlers.NewRecipes(l)
 
 	router := mux.NewRouter()
