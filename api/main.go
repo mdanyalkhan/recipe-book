@@ -21,28 +21,38 @@ const (
 	dbname        = "testdb"
 )
 
+type App struct {
+	Router *mux.Router
+	DB     *sql.DB
+}
+
+func (app *App) Initialize(dbConfig util.Config) error {
+	app.Router = &mux.Router{}
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		dbConfig.Host, dbConfig.Port, dbConfig.User, dbConfig.Password, dbname)
+
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		log.Fatal(err)
+	}
+	app.DB = db
+	return nil
+}
 func main() {
 	l := log.New(os.Stdout, "recipes-api", log.LstdFlags)
 
-	sqlConfig, err := util.ReadConfig(sqlConfigPath)
+	dbConfig, err := util.ReadConfig(sqlConfigPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-		"password=%s dbname=%s sslmode=disable",
-		sqlConfig.Host, sqlConfig.Port, sqlConfig.User, sqlConfig.Password, dbname)
-
-	db, dbErr := sql.Open("postgres", psqlInfo)
-	if dbErr != nil {
-		log.Fatal(dbErr)
+	app := App{}
+	err = app.Initialize(*dbConfig)
+	if err != nil {
+		log.Fatal(err)
 	}
-	defer db.Close()
-	pingErr := db.Ping()
-	if pingErr != nil {
-		log.Fatal(pingErr)
-	}
-
+	defer app.DB.Close()
 	l.Println("Established connection with postgresql")
 	recipes := handlers.NewRecipes(l)
 
