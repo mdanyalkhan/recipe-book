@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io"
 )
@@ -14,6 +15,36 @@ type Recipe struct {
 }
 
 type Recipes []*Recipe
+
+type RecipeSummary struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type RecipeSummaries []*RecipeSummary
+
+func GetRecipesDb(db *sql.DB) (RecipeSummaries, error) {
+	rows, err := db.Query("SELECT ID, Name, Description FROM recipes")
+	if err != nil {
+		return nil, err
+	}
+	recipeSummaries := RecipeSummaries{}
+
+	for rows.Next() {
+		var r RecipeSummary
+		if err := rows.Scan(&r.ID, &r.Name, &r.Description); err != nil {
+			return nil, err
+		}
+		recipeSummaries = append(recipeSummaries, &r)
+	}
+	return recipeSummaries, nil
+}
+
+func (recipeSummaries *RecipeSummaries) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(recipeSummaries)
+}
 
 func GetRecipes() Recipes {
 	return recipeList

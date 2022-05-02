@@ -18,7 +18,7 @@ import (
 
 const (
 	sqlConfigPath = "./sql_config.yaml"
-	dbname        = "testdb"
+	dbname        = "recipe_book_db"
 )
 
 type App struct {
@@ -29,7 +29,7 @@ type App struct {
 }
 
 func (app *App) InitializeRoutes() {
-	recipes := handlers.NewRecipes(app.Logging)
+	recipes := handlers.NewRecipes(app.Logging, app.DB)
 	getRouter := app.Router.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/", recipes.GetRecipes)
 }
