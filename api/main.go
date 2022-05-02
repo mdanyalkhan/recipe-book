@@ -31,6 +31,7 @@ type App struct {
 func (app *App) InitializeRoutes() {
 	recipes := handlers.NewRecipes(app.Logging, app.DB)
 	getRouter := app.Router.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/{id:[0-9]+}", recipes.GetRecipe)
 	getRouter.HandleFunc("/", recipes.GetRecipes)
 }
 
