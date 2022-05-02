@@ -22,11 +22,20 @@ const (
 )
 
 type App struct {
-	Router *mux.Router
-	DB     *sql.DB
+	Logging *log.Logger
+	Router  *mux.Router
+	Server  *http.Server
+	DB      *sql.DB
+}
+
+func (app *App) InitializeRoutes() {
+	recipes := handlers.NewRecipes(app.Logging)
+	getRouter := app.Router.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/", recipes.GetRecipes)
 }
 
 func (app *App) Initialize(dbConfig util.Config) error {
+	app.Logging = log.New(os.Stdout, "recipes-api", log.LstdFlags)
 	app.Router = &mux.Router{}
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
@@ -37,10 +46,31 @@ func (app *App) Initialize(dbConfig util.Config) error {
 		log.Fatal(err)
 	}
 	app.DB = db
+	app.Server = &http.Server{
+		Addr:         ":8888",
+		Handler:      app.Router,
+		ErrorLog:     app.Logging,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+	}
+	app.InitializeRoutes()
 	return nil
 }
+
+func (app *App) Run() error {
+	app.Logging.Println("Starting server on port :8888")
+	err := app.Server.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		app.Logging.Printf("Error starting server %s\n", err)
+		os.Exit(1)
+	} else if err != nil {
+		log.Fatal(err)
+	}
+	return nil
+}
+
 func main() {
-	l := log.New(os.Stdout, "recipes-api", log.LstdFlags)
 
 	dbConfig, err := util.ReadConfig(sqlConfigPath)
 	if err != nil {
@@ -53,31 +83,10 @@ func main() {
 		log.Fatal(err)
 	}
 	defer app.DB.Close()
-	l.Println("Established connection with postgresql")
-	recipes := handlers.NewRecipes(l)
-
-	router := mux.NewRouter()
-	getRouter := router.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/", recipes.GetRecipes)
-
-	server := http.Server{
-		Addr:         ":8888",
-		Handler:      router,
-		ErrorLog:     l,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
-	}
+	app.Logging.Println("Established connection with postgresql")
 
 	// Start server
-	go func() {
-		l.Println("Starting server on port :8888")
-		err := server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			l.Printf("Error starting server %s\n", err)
-			os.Exit(1)
-		}
-	}()
+	go app.Run()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -87,5 +96,5 @@ func main() {
 	log.Println("Got Signal:", sig)
 
 	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	server.Shutdown(ctx)
+	app.Server.Shutdown(ctx)
 }
