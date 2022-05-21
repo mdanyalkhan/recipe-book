@@ -20,6 +20,23 @@ func NewRecipeRespository(db *sql.DB) *recipeRepository {
 	return &recipeRepository{db}
 }
 
+func (r *recipeRepository) FetchRecipes(ctx context.Context) (models.RecipeSummaries, error) {
+	rows, err := r.db.Query("SELECT ID, Name, Description FROM recipes")
+	if err != nil {
+		return nil, err
+	}
+	recipeSummaries := models.RecipeSummaries{}
+	defer rows.Close()
+	for rows.Next() {
+		var r models.RecipeSummary
+		if err := rows.Scan(&r.ID, &r.Name, &r.Description); err != nil {
+			return nil, err
+		}
+		recipeSummaries = append(recipeSummaries, &r)
+	}
+	return recipeSummaries, nil
+}
+
 func (r *recipeRepository) FetchRecipe(ctx context.Context, id int) (*models.Recipe, error) {
 	var recipe models.Recipe
 	var instructions []string
