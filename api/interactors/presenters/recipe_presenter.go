@@ -4,11 +4,6 @@ import "github.com/mdanyalkhan/recipe-book/api/models"
 
 type recipePresenter struct{}
 
-type RecipePresenter interface {
-	ResponseRecipe(r *models.Recipe) *models.Recipe
-	ResponseRecipes(recipes models.RecipeSummaries) models.RecipeSummaries
-}
-
 func NewRecipePresenter() *recipePresenter {
 	return &recipePresenter{}
 }

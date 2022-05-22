@@ -12,11 +12,6 @@ type recipeRepository struct {
 	db *sql.DB
 }
 
-type RecipeRepository interface {
-	FetchRecipes(ctx context.Context) (models.RecipeSummaries, error)
-	FetchRecipe(ctx context.Context, id int) (*models.Recipe, error)
-}
-
 func NewRecipeRespository(db *sql.DB) *recipeRepository {
 	return &recipeRepository{db}
 }
