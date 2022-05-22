@@ -17,7 +17,14 @@ type RecipeSummary struct {
 	Description string `json:"description" validate:"required"`
 }
 
+type RecipeSummaries []*RecipeSummary
+
 func (recipe *Recipe) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(recipe)
+}
+
+func (recipes *RecipeSummaries) ToJSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	return e.Encode(recipes)
 }
