@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/mdanyalkhan/recipe-book/api/models"
 	"github.com/mdanyalkhan/recipe-book/api/services/interactors"
 )
 
@@ -15,6 +17,7 @@ type recipeController struct {
 type RecipeController interface {
 	GetRecipe(rw http.ResponseWriter, r *http.Request)
 	GetRecipes(rw http.ResponseWriter, r *http.Request)
+	AddRecipe(rw http.ResponseWriter, r *http.Request)
 }
 
 func NewRecipeController(rc interactors.RecipeInteractor) *recipeController {
@@ -50,4 +53,19 @@ func (rc *recipeController) GetRecipes(rw http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		http.Error(rw, "Unable to marshal JSON", http.StatusBadRequest)
 	}
+}
+
+func (rc *recipeController) AddRecipe(rw http.ResponseWriter, r *http.Request) {
+	recipe := &models.Recipe{}
+	err := recipe.FromJSON(r.Body)
+	if err != nil {
+		http.Error(rw, "Unable to marshal json", http.StatusBadRequest)
+		return
+	}
+	recipeId, err := rc.recipeInteractor.Add(r.Context(), *recipe)
+	if err != nil {
+		http.Error(rw, "Unable insert new recipe into data store", http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(rw).Encode(map[string]int{"recipeId": recipeId})
 }

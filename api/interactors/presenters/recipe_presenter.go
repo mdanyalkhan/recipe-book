@@ -7,6 +7,7 @@ type recipePresenter struct{}
 type RecipePresenter interface {
 	ResponseRecipe(r *models.Recipe) *models.Recipe
 	ResponseRecipes(recipes models.RecipeSummaries) models.RecipeSummaries
+	ResponseRecipeId(recipeId int) int
 }
 
 func NewRecipePresenter() *recipePresenter {
@@ -19,4 +20,8 @@ func (r *recipePresenter) ResponseRecipe(recipe *models.Recipe) *models.Recipe {
 
 func (r *recipePresenter) ResponseRecipes(recipes models.RecipeSummaries) models.RecipeSummaries {
 	return recipes
+}
+
+func (r *recipePresenter) ResponseRecipeId(recipeId int) int {
+	return recipeId
 }

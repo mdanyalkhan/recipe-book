@@ -29,8 +29,8 @@ CREATE table recipe_ingredients (
             REFERENCES recipes(id)
 );
 
-INSERT INTO recipes (id, name, description) VALUES
-(1, 'Biryani', 'Make this classic Indian dish for deliciously moist lamb with paneer, rice and spinach, all spiced to perfection. Great for casual entertaining');
+INSERT INTO recipes (name, description) VALUES
+('Biryani', 'Make this classic Indian dish for deliciously moist lamb with paneer, rice and spinach, all spiced to perfection. Great for casual entertaining');
 
 INSERT INTO recipe_instructions (id, recipe_id, step, instruction) VALUES
 (1, 1, 1, 'Toss the lamb in a bowl with the garlic, ginger and a large pinch of salt. Marinate in the fridge overnight or for at least a couple of hours.'),

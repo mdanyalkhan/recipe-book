@@ -24,6 +24,11 @@ func (recipe *Recipe) ToJSON(w io.Writer) error {
 	return e.Encode(recipe)
 }
 
+func (recipe *Recipe) FromJSON(r io.Reader) error {
+	e := json.NewDecoder(r)
+	return e.Decode(recipe)
+}
+
 func (recipes *RecipeSummaries) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(recipes)

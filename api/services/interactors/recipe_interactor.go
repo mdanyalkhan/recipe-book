@@ -16,6 +16,7 @@ type recipeInteractor struct {
 type RecipeInteractor interface {
 	Get(ctx context.Context, id int) (*models.Recipe, error)
 	GetSummaries(ctx context.Context) (models.RecipeSummaries, error)
+	Add(ctx context.Context, recipe models.Recipe) (int, error)
 }
 
 func NewRecipeInteractor(p presenters.RecipePresenter, r repositories.RecipeRepository) *recipeInteractor {
@@ -39,4 +40,13 @@ func (r recipeInteractor) GetSummaries(ctx context.Context) (models.RecipeSummar
 	}
 
 	return r.recipePresenter.ResponseRecipes(recipes), nil
+}
+
+func (r recipeInteractor) Add(ctx context.Context, recipePayload models.Recipe) (int, error) {
+	recipeId, err := r.recipeRepository.AddNewRecipe(ctx, recipePayload)
+	if err != nil {
+		return -1, err
+	}
+
+	return r.recipePresenter.ResponseRecipeId(recipeId), nil
 }
