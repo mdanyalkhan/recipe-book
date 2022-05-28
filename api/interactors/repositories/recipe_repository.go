@@ -43,6 +43,30 @@ func (r *recipeRepository) AddNewRecipe(ctx context.Context, recipePayload model
 		log.Println(err)
 		return -1, err
 	}
+
+	// Add recipe instructions
+	rows := [][]interface{}{}
+	for i, instruction := range recipePayload.Instructions {
+		rows = append(rows, []interface{}{lastInsertId, i + 1, instruction})
+	}
+	err = bulkInsertValues(tx, rows, "recipe_instructions", []string{"recipe_id", "step", "instruction"})
+	if err != nil {
+		log.Println(1)
+		log.Println(err)
+		return -1, err
+	}
+
+	// Add recipe ingredients
+	rows = [][]interface{}{}
+	for _, ingredient := range recipePayload.Ingredients {
+		rows = append(rows, []interface{}{lastInsertId, ingredient})
+	}
+	err = bulkInsertValues(tx, rows, "recipe_ingredients", []string{"recipe_id", "ingredient"})
+	if err != nil {
+		log.Println(err)
+		return -1, err
+	}
+
 	// Commit the transaction.
 	if err = tx.Commit(); err != nil {
 		return -1, err
@@ -84,12 +108,14 @@ func (r *recipeRepository) FetchRecipe(ctx context.Context, id int) (*models.Rec
 	// Read recipe summary
 	err = tx.QueryRow("SELECT id, name, description FROM recipes WHERE recipes.id=$1", id).Scan(&recipe.ID, &recipe.Description, &recipe.Name)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	// Read recipe instructions
 	instructionRows, err := tx.Query("SELECT instruction FROM recipe_instructions WHERE recipe_instructions.recipe_id=$1 ORDER BY recipe_instructions.step ASC", id)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -101,8 +127,9 @@ func (r *recipeRepository) FetchRecipe(ctx context.Context, id int) (*models.Rec
 	}
 
 	// Read recipe ingredients
-	ingredientsRow, err := tx.Query("SELECT instruction FROM recipe_instructions WHERE recipe_instructions.recipe_id=$1 ORDER BY recipe_instructions.step ASC", id)
+	ingredientsRow, err := tx.Query("SELECT ingredient FROM recipe_ingredients WHERE recipe_ingredients.recipe_id=$1", id)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	defer ingredientsRow.Close()
