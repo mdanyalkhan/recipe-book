@@ -16,11 +16,84 @@ type recipeRepository struct {
 type RecipeRepository interface {
 	FetchRecipes(ctx context.Context) (models.RecipeSummaries, error)
 	FetchRecipe(ctx context.Context, id int) (*models.Recipe, error)
-	AddNewRecipe(ctx context.Context, recipePayload models.Recipe) (int, error) //TODO implement this with recipeRepository struct
+	AddNewRecipe(ctx context.Context, recipePayload models.Recipe) (int, error)
+	UpdateRecipe(ctx context.Context, updatedRecipe models.Recipe) (*models.Recipe, error)
+	DeleteRecipe(ctx context.Context, recipeId int) (int, error)
 }
 
 func NewRecipeRespository(db *sql.DB) *recipeRepository {
 	return &recipeRepository{db}
+}
+
+func (r *recipeRepository) DeleteRecipe(ctx context.Context, recipeId int) (int, error) {
+
+	tx, err := r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return -1, err
+	}
+	defer tx.Rollback()
+	// Delete recipe instructions
+	err = deleteById(tx, "recipe_instructions", "recipe_id", recipeId)
+	if err != nil {
+		return -1, err
+	}
+	// Delete recipe ingredients
+	err = deleteById(tx, "recipe_ingredients", "recipe_id", recipeId)
+	if err != nil {
+		return -1, err
+	}
+	// Delete recipe summary
+	err = deleteById(tx, "recipes", "id", recipeId)
+	if err != nil {
+		return -1, err
+	}
+	// Commit the transaction.
+	if err = tx.Commit(); err != nil {
+		return -1, err
+	}
+	return recipeId, nil
+}
+
+func (r *recipeRepository) UpdateRecipe(ctx context.Context, updatedRecipe models.Recipe) (*models.Recipe, error) {
+
+	tx, err := r.db.BeginTx(ctx, nil)
+
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	// Update Recipe
+	_, err = tx.Exec("UPDATE recipes SET name = $1, description = $2 WHERE id = $3", updatedRecipe.Name, updatedRecipe.Description, updatedRecipe.ID)
+	if err != nil {
+		return nil, err
+	}
+	// Update recipe instructions
+	err = deleteById(tx, "recipe_instructions", "recipe_id", updatedRecipe.ID)
+	if err != nil {
+		return nil, err
+	}
+	err = insertRecipeInstructions(tx, updatedRecipe.Instructions, updatedRecipe.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update recipe ingredients
+	err = deleteById(tx, "recipe_ingredients", "recipe_id", updatedRecipe.ID)
+	if err != nil {
+		return nil, err
+	}
+	err = insertRecipeIngredients(tx, updatedRecipe.Ingredients, updatedRecipe.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Commit the transaction.
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 func (r *recipeRepository) AddNewRecipe(ctx context.Context, recipePayload models.Recipe) (int, error) {
@@ -45,25 +118,14 @@ func (r *recipeRepository) AddNewRecipe(ctx context.Context, recipePayload model
 	}
 
 	// Add recipe instructions
-	rows := [][]interface{}{}
-	for i, instruction := range recipePayload.Instructions {
-		rows = append(rows, []interface{}{lastInsertId, i + 1, instruction})
-	}
-	err = bulkInsertValues(tx, rows, "recipe_instructions", []string{"recipe_id", "step", "instruction"})
+	err = insertRecipeInstructions(tx, recipePayload.Instructions, int(lastInsertId))
 	if err != nil {
-		log.Println(1)
-		log.Println(err)
 		return -1, err
 	}
 
 	// Add recipe ingredients
-	rows = [][]interface{}{}
-	for _, ingredient := range recipePayload.Ingredients {
-		rows = append(rows, []interface{}{lastInsertId, ingredient})
-	}
-	err = bulkInsertValues(tx, rows, "recipe_ingredients", []string{"recipe_id", "ingredient"})
+	err = insertRecipeIngredients(tx, recipePayload.Ingredients, int(lastInsertId))
 	if err != nil {
-		log.Println(err)
 		return -1, err
 	}
 
@@ -83,7 +145,6 @@ func (r *recipeRepository) FetchRecipes(ctx context.Context) (models.RecipeSumma
 	defer rows.Close()
 	counter := 0
 	for rows.Next() {
-		log.Println(counter)
 		counter++
 		var r models.RecipeSummary
 		if err := rows.Scan(&r.ID, &r.Name, &r.Description); err != nil {

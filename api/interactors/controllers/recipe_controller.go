@@ -18,6 +18,8 @@ type RecipeController interface {
 	GetRecipe(rw http.ResponseWriter, r *http.Request)
 	GetRecipes(rw http.ResponseWriter, r *http.Request)
 	AddRecipe(rw http.ResponseWriter, r *http.Request)
+	DeleteRecipe(rw http.ResponseWriter, r *http.Request)
+	UpdateRecipe(rw http.ResponseWriter, r *http.Request)
 }
 
 func NewRecipeController(rc interactors.RecipeInteractor) *recipeController {
@@ -68,4 +70,37 @@ func (rc *recipeController) AddRecipe(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(rw).Encode(map[string]int{"recipeId": recipeId})
+}
+
+func (rc *recipeController) DeleteRecipe(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(rw, "unable to convert id", http.StatusBadRequest)
+		return
+	}
+	_, err = rc.recipeInteractor.Delete(r.Context(), id)
+	if err != nil {
+		http.Error(rw, "Unable to delete recipe", http.StatusBadRequest)
+		return
+	}
+	json.NewEncoder(rw).Encode(map[string]int{"recipeId": id})
+}
+
+func (rc *recipeController) UpdateRecipe(rw http.ResponseWriter, r *http.Request) {
+	recipe := &models.Recipe{}
+	err := recipe.FromJSON(r.Body)
+	if err != nil {
+		http.Error(rw, "Unable to marshal json", http.StatusBadRequest)
+		return
+	}
+	updatedRecipe, err := rc.recipeInteractor.Update(r.Context(), *recipe)
+	if err != nil {
+		http.Error(rw, "Unable to update recipe in data store", http.StatusBadRequest)
+		return
+	}
+	err = updatedRecipe.ToJSON(rw)
+	if err != nil {
+		http.Error(rw, "Unable to marshal JSON", http.StatusBadRequest)
+	}
 }
